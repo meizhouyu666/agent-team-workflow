@@ -1,0 +1,39 @@
+{
+  "name": "agent-team-workflow",
+  "version": "0.1.0",
+  "description": "Run a persistent three-role agent development team with architecture leadership, bounded implementation, independent review, and recoverable handoff.",
+  "author": {
+    "name": "Meizhouyu",
+    "url": "https://github.com/meizhouyu666"
+  },
+  "homepage": "https://github.com/meizhouyu666/agent-team-workflow#readme",
+  "repository": "https://github.com/meizhouyu666/agent-team-workflow",
+  "license": "MIT",
+  "keywords": [
+    "agents",
+    "codex",
+    "cc-panes",
+    "multi-agent",
+    "code-review",
+    "workflow"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Agent Team Workflow",
+    "shortDescription": "Lead, implement, review, and recover an agent team.",
+    "longDescription": "Provides a persistent team workflow with a user-facing architecture Leader, a visible Executor Mother using bounded internal subagents, an independent Reviewer, durable project state, and recoverable Leader succession. Codex with CC-Panes is the first reference adapter.",
+    "developerName": "Meizhouyu",
+    "category": "Productivity",
+    "capabilities": [
+      "Architecture leadership",
+      "Multi-agent orchestration",
+      "Independent code review",
+      "Durable handoff and recovery"
+    ],
+    "defaultPrompt": [
+      "Lead this project through architecture, implementation, and independent review.",
+      "Execute the approved project spec with safely bounded internal subagents.",
+      "Independently review the current coordinated implementation."
+    ]
+  }
+}
