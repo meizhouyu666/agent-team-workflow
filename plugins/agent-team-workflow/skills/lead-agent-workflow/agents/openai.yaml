@@ -1,0 +1,4 @@
+interface:
+  display_name: "Lead Agent Workflow"
+  short_description: "Lead a persistent three-pane Codex development team"
+  default_prompt: "Use $lead-agent-workflow to discuss this project, maintain its architecture state, and coordinate the fixed three-pane team."
