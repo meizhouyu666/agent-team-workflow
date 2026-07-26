@@ -1,0 +1,4 @@
+interface:
+  display_name: "Review Agent Work"
+  short_description: "Independently review coordinated agent changes"
+  default_prompt: "Use $review-agent-work to independently review the current coordinated changes and publish a verdict."
