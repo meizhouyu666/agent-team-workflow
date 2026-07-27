@@ -1,0 +1,21 @@
+{
+  "name": "agent-team-workflow",
+  "version": "0.2.0",
+  "description": "Provide the optional Claude Leader adapter without changing the default three-Codex topology or live authority on install.",
+  "author": {
+    "name": "Meizhouyu",
+    "url": "https://github.com/meizhouyu666"
+  },
+  "homepage": "https://github.com/meizhouyu666/agent-team-workflow#readme",
+  "repository": "https://github.com/meizhouyu666/agent-team-workflow",
+  "license": "MIT",
+  "keywords": [
+    "agents",
+    "claude-code",
+    "codex",
+    "cc-panes",
+    "multi-agent",
+    "code-review",
+    "workflow"
+  ]
+}

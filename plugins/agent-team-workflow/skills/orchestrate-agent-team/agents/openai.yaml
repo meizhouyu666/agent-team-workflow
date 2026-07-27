@@ -1,4 +1,4 @@
 interface:
   display_name: "Orchestrate Agent Team"
-  short_description: "Plan and coordinate parallel coding agents safely"
+  short_description: "Run the Codex Executor for the selected topology"
   default_prompt: "Use $orchestrate-agent-team to plan this task, delegate safe parallel work, integrate it, and wait for independent review."

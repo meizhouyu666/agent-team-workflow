@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-team-workflow.invalid/schemas/ledger-event.schema.json",
+  "title": "Agent Team Workflow ledger event schema 1",
+  "type": "object", "additionalProperties": false,
+  "required": ["schema_version", "record_sequence", "previous_record_digest", "record_digest", "request_key", "request_sha256", "writer_binding_id", "writer_session_id", "writer_generation", "processing_state", "operation_key", "effect_policy", "readback_predicate", "outcome", "recorded_at"],
+  "properties": {
+    "schema_version": {"const": 1}, "record_sequence": {"type": "integer", "minimum": 1},
+    "previous_record_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "record_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "request_key": {"type": "array", "prefixItems": [{"type": "string"}, {"type": "string"}, {"type": "integer"}, {"type": "string"}], "items": false},
+    "request_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "writer_binding_id": {"type": "string", "minLength": 1}, "writer_session_id": {"type": "string", "minLength": 1}, "writer_generation": {"type": "integer", "minimum": 0},
+    "processing_state": {"enum": ["RECEIVED", "EXECUTING", "SUCCEEDED", "FAILED", "INDETERMINATE"]},
+    "operation_key": {"type": ["string", "null"]}, "effect_policy": {"enum": ["PURE", "RECONCILABLE_IDEMPOTENT", "UNRECONCILABLE"]},
+    "readback_predicate": {"type": ["string", "null"]}, "outcome": {}, "recorded_at": {"type": "string", "format": "date-time"}
+  }
+}

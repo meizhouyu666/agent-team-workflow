@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-team-workflow.invalid/schemas/migration.schema.json",
+  "title": "Agent Team Workflow migration journal schema 1",
+  "type": "object", "additionalProperties": false,
+  "required": ["schema_version", "run_id", "migration_id", "phase", "source_generation", "target_generation", "old_leader", "candidate", "compatibility_row_id", "compatibility_digest", "before_state", "expected_binding_parents", "observed_binding_parents", "steps", "recovery_decision", "candidate_ledger_digest", "candidate_ledger_closed"],
+  "properties": {
+    "schema_version": {"const": 1}, "run_id": {"type": "string", "minLength": 1}, "migration_id": {"type": "string", "minLength": 1},
+    "phase": {"enum": ["CREATED", "PREFLIGHTED", "PREPARED", "VALIDATED", "NEW_LEADER_REGISTERED", "EXECUTOR_REPARENTED", "REVIEWER_REPARENTED", "STATE_ACTIVATED", "WORKERS_ACKED", "OLD_SUPERSEDED", "COMMITTED", "ABORTED", "ROLLED_BACK"]},
+    "source_generation": {"type": "integer", "minimum": 0}, "target_generation": {"type": "integer", "minimum": 1},
+    "old_leader": {"type": "object"},
+    "candidate": {"type": "object", "additionalProperties": false, "required": ["binding_id", "active_session_id", "resume_lineage"], "properties": {"binding_id": {"type": ["string", "null"]}, "active_session_id": {"type": ["string", "null"]}, "resume_lineage": {"type": ["string", "null"]}}},
+    "compatibility_row_id": {"type": "string", "minLength": 1}, "compatibility_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "before_state": {"type": "object"}, "expected_binding_parents": {"type": "object"}, "observed_binding_parents": {"type": "object"},
+    "steps": {"type": "array", "items": {"$ref": "#/$defs/step"}}, "recovery_decision": {"type": ["string", "null"]},
+    "candidate_ledger_digest": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"}, "candidate_ledger_closed": {"type": "boolean"}
+  },
+  "$defs": {"step": {"type": "object", "additionalProperties": false, "required": ["sequence", "phase", "operation", "status", "before", "after", "recorded_at"], "properties": {"sequence": {"type": "integer", "minimum": 1}, "phase": {"type": "string"}, "operation": {"type": "string", "minLength": 1}, "status": {"enum": ["BEFORE", "APPLIED", "RECOVERED"]}, "before": {}, "after": {}, "recorded_at": {"type": "string", "format": "date-time"}}}}
+}

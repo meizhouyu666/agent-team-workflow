@@ -1,7 +1,7 @@
 {
   "name": "agent-team-workflow",
-  "version": "0.1.0",
-  "description": "Run a persistent three-role agent development team with architecture leadership, bounded implementation, independent review, and recoverable handoff.",
+  "version": "0.2.0",
+  "description": "Run a persistent three-Codex team by default, with optional explicitly approved Claude Leader migration and recovery.",
   "author": {
     "name": "Meizhouyu",
     "url": "https://github.com/meizhouyu666"
@@ -11,6 +11,7 @@
   "license": "MIT",
   "keywords": [
     "agents",
+    "claude",
     "codex",
     "cc-panes",
     "multi-agent",
@@ -21,7 +22,7 @@
   "interface": {
     "displayName": "Agent Team Workflow",
     "shortDescription": "Lead, implement, review, and recover an agent team.",
-    "longDescription": "Provides a persistent team workflow with a user-facing architecture Leader, a visible Executor Mother using bounded internal subagents, an independent Reviewer, durable project state, and recoverable Leader succession. Codex with CC-Panes is the first reference adapter.",
+    "longDescription": "Provides a fixed three-pane workflow with a Codex Leader, Codex Executor Mother, and Codex Reviewer by default. Claude Leader routing and journaled migration remain dormant until explicit user-approved topology selection.",
     "developerName": "Meizhouyu",
     "category": "Productivity",
     "capabilities": [

@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-team-workflow.invalid/schemas/role-state.schema.json",
+  "title": "Agent Team Workflow role state schema 1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "workflow_version", "run_id", "leader_generation", "migration_id", "migration_phase", "roles"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "workflow_version": {"const": "0.2.0"},
+    "run_id": {"type": "string", "minLength": 1},
+    "leader_generation": {"type": "integer", "minimum": 0},
+    "migration_id": {"type": ["string", "null"], "minLength": 1},
+    "migration_phase": {"type": ["string", "null"], "enum": [null, "CREATED", "PREFLIGHTED", "PREPARED", "VALIDATED", "NEW_LEADER_REGISTERED", "EXECUTOR_REPARENTED", "REVIEWER_REPARENTED", "STATE_ACTIVATED", "WORKERS_ACKED", "OLD_SUPERSEDED", "COMMITTED", "ABORTED", "ROLLED_BACK"]},
+    "roles": {
+      "type": "array", "minItems": 3, "maxItems": 3,
+      "prefixItems": [
+        {"$ref": "#/$defs/role", "properties": {"role": {"const": "leader"}}},
+        {"$ref": "#/$defs/role", "properties": {"role": {"const": "executor"}}},
+        {"$ref": "#/$defs/role", "properties": {"role": {"const": "reviewer"}}}
+      ], "items": false
+    }
+  },
+  "$defs": {
+    "role": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema_version", "role", "cli_tool", "adapter_id", "runtime_kind", "project_root", "session_id", "resume_id", "pane_id", "tab_id", "binding_id", "parent_binding_id", "leader_generation", "authority_state", "required_capabilities", "advertised_capabilities", "verified_at"],
+      "properties": {
+        "schema_version": {"const": 1}, "role": {"enum": ["leader", "executor", "reviewer"]},
+        "cli_tool": {"type": "string", "minLength": 1}, "adapter_id": {"type": "string", "minLength": 1},
+        "runtime_kind": {"type": "string", "minLength": 1}, "project_root": {"type": "string", "minLength": 1},
+        "session_id": {"type": "string", "minLength": 1}, "resume_id": {"type": ["string", "null"], "minLength": 1},
+        "pane_id": {"type": "string", "minLength": 1}, "tab_id": {"type": "string", "minLength": 1},
+        "binding_id": {"type": "string", "minLength": 1}, "parent_binding_id": {"type": ["string", "null"], "minLength": 1},
+        "leader_generation": {"type": "integer", "minimum": 0},
+        "authority_state": {"enum": ["ACTIVE", "CANDIDATE", "FROZEN", "SUPERSEDED", "QUARANTINED"]},
+        "required_capabilities": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+        "advertised_capabilities": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+        "verified_at": {"type": "string", "format": "date-time"}
+      }
+    }
+  }
+}

@@ -1,4 +1,4 @@
 interface:
   display_name: "Review Agent Work"
-  short_description: "Independently review coordinated agent changes"
+  short_description: "Run the independent Codex Reviewer for the selected topology"
   default_prompt: "Use $review-agent-work to independently review the current coordinated changes and publish a verdict."

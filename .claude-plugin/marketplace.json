@@ -1,0 +1,29 @@
+{
+  "name": "agent-team-workflow",
+  "description": "Native Claude Code distribution for an optional, explicitly selected Claude Leader topology.",
+  "owner": {
+    "name": "Meizhouyu"
+  },
+  "plugins": [
+    {
+      "name": "agent-team-workflow",
+      "version": "0.2.0",
+      "source": "./plugins/agent-team-workflow",
+      "description": "Keep the three-Codex topology by default; enable a Claude Leader only after explicit user approval.",
+      "author": {
+        "name": "Meizhouyu"
+      },
+      "homepage": "https://github.com/meizhouyu666/agent-team-workflow#readme",
+      "repository": "https://github.com/meizhouyu666/agent-team-workflow",
+      "license": "MIT",
+      "keywords": [
+        "agents",
+        "claude-code",
+        "codex",
+        "cc-panes",
+        "multi-agent"
+      ],
+      "category": "development"
+    }
+  ]
+}

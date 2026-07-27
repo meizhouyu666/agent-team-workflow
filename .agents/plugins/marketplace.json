@@ -6,6 +6,8 @@
   "plugins": [
     {
       "name": "agent-team-workflow",
+      "version": "0.2.0",
+      "description": "Default Codex Leader, Executor, and Reviewer workflow; Claude Leader requires explicit user-approved topology selection.",
       "source": {
         "source": "local",
         "path": "./plugins/agent-team-workflow"
