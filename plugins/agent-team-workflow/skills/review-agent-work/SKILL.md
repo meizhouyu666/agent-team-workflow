@@ -107,6 +107,29 @@ complete compatibility, migration, exhaustive fault-injection, or full E2E gates
 unless the reviewed change or original finding touches that surface. Assurance
 mode retains those checks only after explicit opt-in.
 
+## Verify the lean behavior guard
+
+For every lean run, require the schema-1 state at
+`.codex/guards/<run-id>.json` produced by the bundled
+`../../scripts/workflow_guard.py`. The shared limits are
+`spec_revisions: 1`, `internal_agents: 0`, `implementation_reviews: 1`,
+`focused_re_reviews: 1`, `same_failure_retries: 2`,
+`full_test_suite_runs: 1`, and `scope_expansions: 0`.
+
+Before reviewing, verify that the Leader supplied the stable operation key of a
+matching consumed `implementation_review` or `focused_re_review` event. Small work
+may leave the visible Reviewer waiting until the one final implementation review.
+A focused re-review inspects only the original blocking findings and never widens
+the review. The Reviewer verifies allowance; it does not consume another event.
+
+All roles use the same denial mapping: `SPEC_LIMIT_REACHED`,
+`AGENT_LIMIT_REACHED`, `REVIEW_LIMIT_REACHED`, `RETRY_LIMIT_REACHED`,
+`TEST_LIMIT_REACHED`, and `SCOPE_APPROVAL_REQUIRED`. Missing, malformed, denied,
+or mismatched guard evidence fails closed and is reported without switching modes,
+widening scope, or asking another CLI to bypass the guard. Enforcement is
+deterministic for protocol-compliant Skills and adapters, not a security boundary
+against unmanaged processes.
+
 ## Review in evidence order
 
 For implementation review, use this precedence:

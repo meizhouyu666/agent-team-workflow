@@ -84,6 +84,29 @@ descriptor IDs when schema-1 `claude-leader` state is active. Update the Executo
 TaskBinding at meaningful milestones and automatically report concise status to
 the current Leader.
 
+## Enforce the lean behavior guard
+
+For every lean run, initialize exactly one
+`.codex/guards/<run-id>.json` with the bundled
+`../../scripts/workflow_guard.py`. Schema 1 limits are identical for all roles:
+`spec_revisions: 1`, `internal_agents: 0`, `implementation_reviews: 1`,
+`focused_re_reviews: 1`, `same_failure_retries: 2`,
+`full_test_suite_runs: 1`, and `scope_expansions: 0`.
+
+The Executor must atomically consume a stable operation key before each
+`internal_agent`, `same_failure_retry`, or `full_test_suite` action. Retry events
+also require a stable failure key and receive an independent allowance for each
+failure. With the default `internal_agents: 0`, a lean Executor remains sequential.
+The Leader, not the Executor, consumes review-dispatch events.
+
+All roles use the same denial mapping: `SPEC_LIMIT_REACHED`,
+`AGENT_LIMIT_REACHED`, `REVIEW_LIMIT_REACHED`, `RETRY_LIMIT_REACHED`,
+`TEST_LIMIT_REACHED`, and `SCOPE_APPROVAL_REQUIRED`. A denial is durable recovery
+evidence: stop the action, report the code, and do not switch modes, widen scope,
+or ask another CLI to bypass the guard. This is deterministic enforcement for
+protocol-compliant Skills and adapters, not a security boundary against unmanaged
+processes.
+
 ## Create or resume the run
 
 Resolve the project root with Git when possible. Store coordination artifacts under `<project-root>/.codex/`:

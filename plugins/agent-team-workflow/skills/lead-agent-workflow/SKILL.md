@@ -236,6 +236,30 @@ unless the touched surface directly requires them. `assurance` retains the full
 migration and evidence protocol but never activates a Leader takeover without
 separate authority.
 
+## Enforce the lean behavior guard
+
+For every lean run, initialize exactly one
+`.codex/guards/<run-id>.json` with the bundled
+`../../scripts/workflow_guard.py`. Schema 1 limits are identical for all roles:
+`spec_revisions: 1`, `internal_agents: 0`, `implementation_reviews: 1`,
+`focused_re_reviews: 1`, `same_failure_retries: 2`,
+`full_test_suite_runs: 1`, and `scope_expansions: 0`.
+
+The Leader must atomically consume a stable operation key before each
+`spec_revision`, `scope_expansion`, `implementation_review`, or
+`focused_re_review`. A normal lean run may leave the visible Reviewer waiting until
+one final implementation review is useful. A focused re-review may cover only the
+original blocking findings. The Leader must not dispatch a review without the
+matching consumed event.
+
+All roles use the same denial mapping: `SPEC_LIMIT_REACHED`,
+`AGENT_LIMIT_REACHED`, `REVIEW_LIMIT_REACHED`, `RETRY_LIMIT_REACHED`,
+`TEST_LIMIT_REACHED`, and `SCOPE_APPROVAL_REQUIRED`. A denial is durable recovery
+evidence: stop the action, report the code, and do not switch modes, widen scope,
+or ask another CLI to bypass the guard. This is deterministic enforcement for
+protocol-compliant Skills and adapters, not a security boundary against unmanaged
+processes.
+
 ## Discuss before implementing
 
 Accept incomplete ideas. Inspect the selected project, use internal read-only research subagents when useful, and discuss alternatives with concrete trade-offs. Do not start implementation merely because a plausible solution exists.

@@ -199,6 +199,60 @@ class PackagingContractTests(unittest.TestCase):
             compatibility["upgrade_path"],
         )
 
+    def test_lean_behavior_guard_contract_is_consistent(self) -> None:
+        script = PLUGIN / "scripts" / "workflow_guard.py"
+        self.assertTrue(script.is_file())
+        skills = {
+            name: (PLUGIN / "skills" / name / "SKILL.md").read_text(encoding="utf-8")
+            for name in (
+                "lead-agent-workflow", "orchestrate-agent-team", "review-agent-work",
+            )
+        }
+        shared = (
+            ".codex/guards/<run-id>.json",
+            "`spec_revisions: 1`",
+            "`internal_agents: 0`",
+            "`implementation_reviews: 1`",
+            "`focused_re_reviews: 1`",
+            "`same_failure_retries: 2`",
+            "`full_test_suite_runs: 1`",
+            "`scope_expansions: 0`",
+            "SPEC_LIMIT_REACHED",
+            "AGENT_LIMIT_REACHED",
+            "REVIEW_LIMIT_REACHED",
+            "RETRY_LIMIT_REACHED",
+            "TEST_LIMIT_REACHED",
+            "SCOPE_APPROVAL_REQUIRED",
+            "not a security boundary",
+        )
+        for text in skills.values():
+            for required in shared:
+                self.assertIn(required, text)
+
+        for action in (
+            "`spec_revision`", "`scope_expansion`", "`implementation_review`",
+            "`focused_re_review`",
+        ):
+            self.assertIn(action, skills["lead-agent-workflow"])
+        for action in ("`internal_agent`", "`same_failure_retry`", "`full_test_suite`"):
+            self.assertIn(action, skills["orchestrate-agent-team"])
+        self.assertIn("matching consumed", skills["review-agent-work"])
+        self.assertIn("never widens", skills["review-agent-work"])
+
+        docs = "\n".join(
+            (ROOT / relative).read_text(encoding="utf-8")
+            for relative in (
+                "README_EN.md", "docs/protocol.md", "docs/operator-guide.md",
+            )
+        )
+        for required in (
+            "workflow_guard.py", "init", "consume", "status",
+            ".codex/guards/<run-id>.json", "stable operation",
+            "failure key", "atomically", "SCOPE_APPROVAL_REQUIRED",
+            "not a security boundary",
+        ):
+            self.assertIn(required, docs)
+
 
 if __name__ == "__main__":
     unittest.main()

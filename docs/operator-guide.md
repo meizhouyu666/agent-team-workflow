@@ -26,6 +26,26 @@ Clean-install, complete compatibility, migration, exhaustive fault-injection, an
 full E2E gates belong to explicit assurance mode or a directly touched surface.
 Claude takeover remains deferred regardless of the validation budget.
 
+## Operate the lean behavior guard
+
+Initialize once per lean run, then inspect or consume only with stable operation
+keys:
+
+~~~powershell
+python plugins/agent-team-workflow/scripts/workflow_guard.py init --root . --run-id <run-id>
+python plugins/agent-team-workflow/scripts/workflow_guard.py status --root . --run-id <run-id>
+python plugins/agent-team-workflow/scripts/workflow_guard.py consume --root . --run-id <run-id> --action implementation_review --operation-key <stable-key>
+python plugins/agent-team-workflow/scripts/workflow_guard.py consume --root . --run-id <run-id> --action same_failure_retry --operation-key <stable-key> --failure-key <stable-failure-key>
+~~~
+
+State lives at `.codex/guards/<run-id>.json` and remains coordination evidence
+outside product fingerprints. Repeated identical operation keys are idempotent.
+Malformed state, run mismatch, or a limit denial returns nonzero; denials remain in
+the event history with their stable code. Do not edit the JSON by hand, silently
+switch modes, expand scope, or route the action through another CLI. The guard is a
+deterministic contract for compliant Skills and adapters, not an OS security
+boundary.
+
 ## Validate and discover the native packages
 
 From the tagged repository root, validate Claude's plugin directory and repository

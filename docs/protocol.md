@@ -177,6 +177,30 @@ gates are not default lean requirements unless the touched surface directly need
 them. Assurance availability does not authorize a Claude takeover or authority
 migration.
 
+## Lean behavior guard
+
+Each lean run initializes one schema-1 JSON state at
+`.codex/guards/<run-id>.json`. It records the run ID, `lean` mode, fixed limits,
+and ordered idempotency events. A standard-library helper locks the run state,
+validates the full event history, and atomically replaces the file for every
+consumption or denial. Reusing the same action and operation key replays its saved
+outcome without consuming twice; `same_failure_retry` also requires a failure key
+and counts each failure independently.
+
+The limits are `spec_revisions: 1`, `internal_agents: 0`,
+`implementation_reviews: 1`, `focused_re_reviews: 1`,
+`same_failure_retries: 2`, `full_test_suite_runs: 1`, and
+`scope_expansions: 0`. Leader owns `spec_revision`, `scope_expansion`,
+`implementation_review`, and `focused_re_review`; Executor owns `internal_agent`,
+`same_failure_retry`, and `full_test_suite`; Reviewer verifies the matching review
+event and never consumes another allowance or widens a focused re-review.
+
+Denials persist evidence and fail closed with `SPEC_LIMIT_REACHED`,
+`AGENT_LIMIT_REACHED`, `REVIEW_LIMIT_REACHED`, `RETRY_LIMIT_REACHED`,
+`TEST_LIMIT_REACHED`, or `SCOPE_APPROVAL_REQUIRED`. A compliant role stops the
+action and reports the code without mode escalation or another-CLI bypass. This is
+deterministic protocol enforcement, not a security boundary for unmanaged writers.
+
 ## Invariants
 
 - One user-facing Leader owns architecture at a time.

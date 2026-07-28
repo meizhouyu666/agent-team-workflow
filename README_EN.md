@@ -17,6 +17,20 @@ Implementation fixes and review iterations do not bump `spec_version`.
 migration, exhaustive fault-injection, or full E2E gates. Claude takeover remains
 deferred and is never implied by selecting a validation mode.
 
+## Lean behavior guard
+
+Every lean run has one schema-1 guard at `.codex/guards/<run-id>.json`. The
+standard-library `workflow_guard.py` provides `init`, `consume`, and `status`, uses
+stable operation keys for idempotency, counts retries independently by failure key,
+and atomically persists both consumption and denial evidence.
+
+Defaults are one spec revision, zero internal Agents, one implementation review,
+one focused re-review, two retries per same failure, one full-suite run, and zero
+scope expansions. Stable denials are `SPEC_LIMIT_REACHED`, `AGENT_LIMIT_REACHED`,
+`REVIEW_LIMIT_REACHED`, `RETRY_LIMIT_REACHED`, `TEST_LIMIT_REACHED`, and
+`SCOPE_APPROVAL_REQUIRED`. The guard constrains protocol-compliant Skills and
+adapters; it is not a security boundary against unmanaged processes.
+
 ## Team model
 
 - **Leader**: Codex by default; Claude Code only after explicit `claude-leader` approval. It discusses requirements and architecture, owns durable decisions and routing, and does not implement application code.
