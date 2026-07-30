@@ -87,9 +87,9 @@ class FakeTransport:
         self._hook(f"{point}:{category}:{name}")
         self.assert_invariants()
 
-    def configure_oracle(self, *, pane_ids: list[str], authority_generation: int, leader_binding_ids: list[str], worker_binding_ids: list[str], recoverable_parent_ids: list[str]) -> None:
+    def configure_oracle(self, *, role_sessions: list[tuple[str, str]], authority_generation: int, leader_binding_ids: list[str], worker_binding_ids: list[str], recoverable_parent_ids: list[str]) -> None:
         self.oracle = {
-            "pane_ids": set(pane_ids),
+            "role_sessions": set(role_sessions),
             "authority_generation": authority_generation,
             "leader_binding_ids": set(leader_binding_ids),
             "worker_binding_ids": set(worker_binding_ids),
@@ -98,7 +98,7 @@ class FakeTransport:
         self.assert_invariants()
 
     def configure_migration_oracle(
-        self, *, pane_ids: list[str], source_generation: int, target_generation: int,
+        self, *, role_sessions: list[tuple[str, str]], source_generation: int, target_generation: int,
         old_leader_binding_id: str, new_leader_binding_id: str,
         old_leader_session_id: str, worker_binding_ids: list[str],
         candidate_binding_ids: list[str], recoverable_parent_ids: list[str],
@@ -106,7 +106,7 @@ class FakeTransport:
     ) -> None:
         """Install a transition-aware oracle for the supported fake migration."""
         self.oracle = {
-            "pane_ids": set(pane_ids),
+            "role_sessions": set(role_sessions),
             "authority_generation": source_generation,
             "source_generation": source_generation,
             "target_generation": target_generation,
@@ -147,9 +147,14 @@ class FakeTransport:
     def assert_invariants(self) -> None:
         if self.oracle is None:
             return
-        running_panes = {session.get("pane_id") for session in self.sessions.values() if session.get("running", True)}
-        if running_panes != self.oracle["pane_ids"] or len(running_panes) != 3:
-            raise ProtocolError("PANE_INVARIANT", f"expected exactly {sorted(self.oracle['pane_ids'])}, got {sorted(running_panes)}")
+        running_role_sessions = {
+            (session.get("role"), session.get("session_id"))
+            for session in self.sessions.values() if session.get("running", True)
+        }
+        if (not running_role_sessions.issubset(self.oracle["role_sessions"])
+                or {role for role, _session_id in running_role_sessions} != {"leader", "executor", "reviewer"}
+                or len({session_id for _role, session_id in running_role_sessions}) != len(running_role_sessions)):
+            raise ProtocolError("ROLE_PROCESS_INVARIANT", f"unexpected role/session process: {sorted(running_role_sessions)}")
         active = [
             binding for binding_id, binding in self.bindings.items()
             if binding_id in self.oracle["leader_binding_ids"]
@@ -895,7 +900,7 @@ def validate_e2e_evidence(evidence: Mapping[str, Any]) -> dict[str, Any]:
         if decision["row_id"] != evidence["compatibility_row_id"] or decision["artifact_digest"] != evidence["compatibility_digest"]:
             raise ProtocolError("INVALID_GATE_EVIDENCE", gate_phase)
     expected_identities = [
-        {key: role[key] for key in ("role", "cli_tool", "pane_id", "tab_id", "session_id", "binding_id")}
+        {key: role[key] for key in ("role", "cli_tool", "session_id", "binding_id")}
         for role in after_state["roles"]
     ]
     if evidence["identities"] != expected_identities:
@@ -925,10 +930,12 @@ def validate_e2e_evidence(evidence: Mapping[str, Any]) -> dict[str, Any]:
         if len(str(assertion["evidence_digest"])) != 64:
             raise ProtocolError("INVALID_E2E_DIGEST", assertion["name"])
     for identity in evidence["identities"]:
-        if set(identity) != {"role", "cli_tool", "pane_id", "tab_id", "session_id", "binding_id"}:
+        if set(identity) != {"role", "cli_tool", "session_id", "binding_id"}:
             raise ProtocolError("INVALID_E2E_IDENTITY", str(identity))
-    if len({identity["pane_id"] for identity in evidence["identities"]}) != 3:
-        raise ProtocolError("INVALID_E2E_TOPOLOGY", "exactly three unique panes required")
+    if (len({identity["role"] for identity in evidence["identities"]}) != 3
+            or len({identity["session_id"] for identity in evidence["identities"]}) != 3
+            or len({identity["binding_id"] for identity in evidence["identities"]}) != 3):
+        raise ProtocolError("INVALID_E2E_TOPOLOGY", "exactly three unique role/session/binding processes required")
     for event in evidence["tool_events"]:
         base = {"operation", "request_id", "response_id", "request_digest", "response_digest"}
         extended = base | {"sequence", "request", "response"}
@@ -1047,13 +1054,15 @@ def validate_pre_authority_live_smoke(value: Mapping[str, Any]) -> dict[str, Any
     if len(rows) != 1 or rows[0]["status"] != "SUPPORTED":
         raise ProtocolError("INVALID_LIVE_SMOKE_CORRELATION", "supported row")
     identities = value["identities"]
-    identity_fields = {"role", "cli_tool", "pane_id", "tab_id", "session_id", "binding_id"}
+    identity_fields = {"role", "cli_tool", "session_id", "binding_id"}
     if not isinstance(identities, list) or len(identities) != 3 or [item.get("role") for item in identities] != ["leader", "executor", "reviewer"]:
         raise ProtocolError("INVALID_LIVE_SMOKE_IDENTITIES", "three ordered roles")
     if any(not isinstance(item, dict) or set(item) != identity_fields or any(not item[key] for key in identity_fields) for item in identities):
         raise ProtocolError("INVALID_LIVE_SMOKE_IDENTITIES", "exact non-empty identities")
-    if len({item["pane_id"] for item in identities}) != 3 or len({item["binding_id"] for item in identities}) != 3 or len({item["session_id"] for item in identities}) != 3:
-        raise ProtocolError("INVALID_LIVE_SMOKE_IDENTITIES", "unique pane/session/binding")
+    if (len({item["role"] for item in identities}) != 3
+            or len({item["binding_id"] for item in identities}) != 3
+            or len({item["session_id"] for item in identities}) != 3):
+        raise ProtocolError("INVALID_LIVE_SMOKE_IDENTITIES", "unique role/session/binding")
     context = value["probe_context"]
     if not isinstance(context, dict) or set(context) != set(LIVE_CONTEXT_FIELDS) or context["run_id"] != value["run_id"]:
         raise ProtocolError("INVALID_LIVE_SMOKE_CONTEXT", "exact run context")
@@ -1188,7 +1197,7 @@ def build_e2e_evidence(
         raise ProtocolError("INVALID_E2E_ROLE_STATE", "three after-state roles required")
     identities = []
     for role in after_role_state["roles"]:
-        identities.append({key: role[key] for key in ("role", "cli_tool", "pane_id", "tab_id", "session_id", "binding_id")})
+        identities.append({key: role[key] for key in ("role", "cli_tool", "session_id", "binding_id")})
     tool_events = [
         {key: call[key] for key in ("sequence", "operation", "request_id", "response_id", "request", "response", "request_digest", "response_digest")}
         for call in transport.calls
@@ -1270,7 +1279,7 @@ def _fake_role_state(root: Path, run_id: str, migration_id: str, generation: int
             "schema_version": 1, "role": role, "cli_tool": cli_tool,
             "adapter_id": "fake-ccpanes", "runtime_kind": "local",
             "project_root": str(root), "session_id": f"session-{suffix}",
-            "resume_id": None, "pane_id": f"pane-{role}", "tab_id": f"tab-{suffix}",
+            "resume_id": None,
             "binding_id": leader_binding if role == "leader" else f"binding-{role}",
             "parent_binding_id": None if role == "leader" else leader_binding,
             "leader_generation": generation,
@@ -1376,9 +1385,7 @@ def _gate_probe_record(
         owner_session = context["candidate_session_id"]
     if not isinstance(target_kind, str) or not target_kind or not isinstance(target_id, str) or not target_id:
         raise ProtocolError("INVALID_GATE_EVIDENCE", "target kind/id")
-    if target_kind in ("leader-pane", "layout"):
-        target_binding = target_session = None
-    elif target_kind in ("coordinator-binding", "coordinator-session"):
+    if target_kind in ("coordinator-binding", "coordinator-session"):
         target_binding = context["coordinator_binding_id"]
         target_session = context["coordinator_session_id"]
     elif target_kind in ("candidate-binding", "candidate-session"):
@@ -1421,7 +1428,7 @@ def _supported_gate_observed(
     row = next(item for item in artifact["rows"] if item["id"] == row_id)
     artifact_digest = digest(artifact)
     definitions = (
-        ("PRE_LAUNCH", "coordinator", "launchRole", "launch_creates_one_tab_in_existing_pane", "pre-launch-role", {"pane_id": "pane-leader", "new_tab_count": 1, "new_pane_count": 0}, "leader-pane", "pane-leader"),
+        ("PRE_LAUNCH", "coordinator", "launchRole", "launch_creates_one_tab_in_existing_pane", "pre-launch-role", {"role": "leader", "session_id": context["coordinator_session_id"]}, "coordinator-session", context["coordinator_session_id"]),
         ("PRE_LAUNCH", "coordinator", "observeSession", "session_identity_is_stable", "pre-observe-coordinator", {"session_id": context["coordinator_session_id"], "stable": True}, "coordinator-session", context["coordinator_session_id"]),
         ("POST_LAUNCH", "coordinator", "bindRole", "binding_has_exact_candidate_metadata", "post-bind-candidate", {"binding_id": context["candidate_binding_id"], "generation": context["target_generation"], "authority_state": "CANDIDATE"}, "candidate-binding", context["candidate_binding_id"]),
         ("POST_LAUNCH", "coordinator", "deliverPrompt", "prompt_output_has_probe_id_nonce_hash", "post-deliver-handshake", {"session_id": context["candidate_session_id"], "delivered": True}, "candidate-session", context["candidate_session_id"]),
@@ -1470,14 +1477,14 @@ def run_supported_fake_e2e(root: Path, run_id: str, compatibility_path: Path) ->
     transport = FakeTransport()
     transport.projects[str(root)] = {"project_root": str(root)}
     for role in before["roles"]:
-        transport.sessions[role["session_id"]] = {key: role[key] for key in ("role", "cli_tool", "session_id", "pane_id", "tab_id")} | {"running": True}
+        transport.sessions[role["session_id"]] = {key: role[key] for key in ("role", "cli_tool", "session_id")} | {"running": True}
         transport.bindings[role["binding_id"]] = {
             "role": role["role"], "binding_id": role["binding_id"],
             "parent_binding_id": role["parent_binding_id"], "leader_generation": 1,
             "authority_state": role["authority_state"],
         }
     transport.configure_migration_oracle(
-        pane_ids=[role["pane_id"] for role in before["roles"]],
+        role_sessions=[(role["role"], role["session_id"]) for role in before["roles"]] + [(new_leader["role"], new_leader["session_id"])],
         source_generation=1, target_generation=2,
         old_leader_binding_id=old_leader["binding_id"],
         new_leader_binding_id=new_leader["binding_id"],
@@ -1546,11 +1553,11 @@ def run_supported_fake_e2e(root: Path, run_id: str, compatibility_path: Path) ->
         if phase == "PRE_LAUNCH":
             applied("PREFLIGHTED", key)
 
-    old_descriptor = {key: old_leader[key] for key in ("role", "cli_tool", "session_id", "pane_id", "tab_id")}
+    old_descriptor = {key: old_leader[key] for key in ("role", "cli_tool", "session_id")}
     capture_gate(
         phase="PRE_LAUNCH", owner="coordinator", primitive="launchRole",
         predicate="launch_creates_one_tab_in_existing_pane", probe_id="pre-launch-role",
-        target_kind="leader-pane", target_id=old_leader["pane_id"],
+        target_kind="coordinator-session", target_id=old_leader["session_id"],
         effect=lambda key: transport.launchRole(key, old_descriptor),
     )
     capture_gate(
@@ -1566,7 +1573,6 @@ def run_supported_fake_e2e(root: Path, run_id: str, compatibility_path: Path) ->
     candidate_launch_key = operation_key(migration_id, "candidate-launch", "launchRole")
     paired("PREPARED", candidate_launch_key, lambda: transport.launchRole(candidate_launch_key, {
         "role": "leader", "cli_tool": "claude", "session_id": new_leader["session_id"],
-        "pane_id": new_leader["pane_id"], "tab_id": new_leader["tab_id"],
     }))
 
     candidate_probe_ids = ["candidate-binding", "candidate-prompt", "candidate-report"]
@@ -1916,7 +1922,7 @@ def run_supported_fake_e2e(root: Path, run_id: str, compatibility_path: Path) ->
         migration_journal=journal, candidate_ledger_records=candidate_records,
         gate_observed=gate_observed, envelopes=list(envelopes), probe_results=probe_results,
         assertions=[
-            {"name": "exactly-three-panes", "passed": True, "evidence": sorted({role["pane_id"] for role in after["roles"]})},
+            {"name": "exactly-three-role-processes", "passed": True, "evidence": sorted((role["role"], role["session_id"], role["binding_id"]) for role in after["roles"])},
             {"name": "one-cooperative-authority", "passed": True, "evidence": {"binding_id": new_leader["binding_id"], "generation": 2}},
             {"name": "recoverable-parent-graph", "passed": True, "evidence": after_bindings},
             {"name": "durable-role-state-readback", "passed": transport.role_state_readback == after, "evidence": transport.role_state_readback},

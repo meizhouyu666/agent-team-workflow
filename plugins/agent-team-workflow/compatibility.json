@@ -22,8 +22,8 @@
         "tagged-repository-native-codex-marketplace"
       ],
       "cache_action": "manual-refresh-only-install-and-load-are-inert",
-      "upgrade_path": "preserve-codex-three-pane-schema-0-unless-claude-leader-explicitly-approved",
-      "rollback_path": "commit-codex-leader-finish-or-abort-migration-export-schema-0-mirror-start-fresh-0.1-sessions",
+      "upgrade_path": "preserve-codex-three-role-schema-0-unless-claude-leader-explicitly-approved",
+      "rollback_path": "finish-or-abort-migration-export-schema-0-mirror-start-fresh-0.1-role-processes",
       "version_skew": "fail-closed",
       "required_static": {
         "compatibility_schema": 1,
@@ -58,7 +58,7 @@
       "required_predicates": [
         "binding_has_exact_candidate_metadata",
         "binding_parent_matches_generation",
-        "launch_creates_one_tab_in_existing_pane",
+        "replacement_preserves_exactly_three_role_processes",
         "prompt_output_has_probe_id_nonce_hash",
         "report_observation_has_operation_key_probe_id_hash",
         "session_identity_is_stable",

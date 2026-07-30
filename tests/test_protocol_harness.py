@@ -24,13 +24,11 @@ NOW = "2026-07-26T12:00:00Z"
 COMPATIBILITY_PATH = ROOT / "plugins" / "agent-team-workflow" / "compatibility.json"
 
 
-def session(role: str, *, session_id: str | None = None, pane_id: str | None = None, tab_id: str | None = None) -> dict:
+def session(role: str, *, session_id: str | None = None) -> dict:
     return {
         "role": role,
         "cli_tool": "claude" if role == "leader" else "codex",
         "session_id": session_id or f"session-{role}",
-        "pane_id": pane_id or f"pane-{role}",
-        "tab_id": tab_id or f"tab-{role}",
         "project_root": r"E:\meizhouyu\agentstudy\agent-team-workflow",
     }
 
@@ -84,8 +82,6 @@ def role_state() -> dict:
             "project_root": r"E:\meizhouyu\agentstudy\agent-team-workflow",
             "session_id": f"session-{role}",
             "resume_id": None,
-            "pane_id": f"pane-{role}",
-            "tab_id": f"tab-{role}",
             "binding_id": f"binding-{role}",
             "parent_binding_id": None if role == "leader" else "binding-leader",
             "leader_generation": 1,
@@ -107,7 +103,8 @@ def role_state() -> dict:
 
 def assert_oracle(test: unittest.TestCase, transport: harness.FakeTransport) -> None:
     running = [item for item in transport.sessions.values() if item.get("running")]
-    test.assertEqual(3, len({item["pane_id"] for item in running}))
+    test.assertEqual({"leader", "executor", "reviewer"}, {item["role"] for item in running})
+    test.assertEqual(len(running), len({item["session_id"] for item in running}))
     active = [item for item in transport.bindings.values() if item.get("authority_state") == "ACTIVE"]
     test.assertEqual(1, len(active))
     leader_binding = active[0]["binding_id"]
@@ -381,7 +378,6 @@ class FakeTransportCrashTests(unittest.TestCase):
             transport.sessions["candidate-session"] = dict(
                 session(
                     "leader", session_id="candidate-session",
-                    pane_id="pane-leader", tab_id="candidate-tab",
                 ),
                 running=True,
             )
@@ -394,7 +390,7 @@ class FakeTransportCrashTests(unittest.TestCase):
                 ),
             }
             transport.configure_oracle(
-                pane_ids=["pane-leader", "pane-executor", "pane-reviewer"],
+                role_sessions=[("leader", "session-leader"), ("leader", "candidate-session"), ("executor", "session-executor"), ("reviewer", "session-reviewer")],
                 authority_generation=1,
                 leader_binding_ids=["binding-leader", "candidate-binding"],
                 worker_binding_ids=["binding-executor", "binding-reviewer"],
@@ -409,7 +405,6 @@ class FakeTransportCrashTests(unittest.TestCase):
             transport.interrupt_at = "before:resumeRole"
             replacement = session(
                 "leader", session_id="replacement-session",
-                pane_id="pane-leader", tab_id="candidate-tab-2",
             )
             with self.assertRaises(harness.InjectedCrash):
                 transport.resumeRole("resume-candidate", replacement)
@@ -455,7 +450,7 @@ class FakeTransportCrashTests(unittest.TestCase):
             "binding-reviewer": binding("reviewer"),
         }
         transport.configure_oracle(
-            pane_ids=["pane-leader", "pane-executor", "pane-reviewer"],
+            role_sessions=[("leader", "session-leader"), ("leader", "candidate-session"), ("executor", "session-executor"), ("reviewer", "session-reviewer")],
             authority_generation=1,
             leader_binding_ids=["binding-leader", "candidate-binding"],
             worker_binding_ids=["binding-executor", "binding-reviewer"],
@@ -463,10 +458,9 @@ class FakeTransportCrashTests(unittest.TestCase):
         )
         assert_oracle(self, transport)
 
-        # A candidate adds one tab in the existing Leader pane, never a pane.
+        # A candidate is tracked by its role/session/binding identity only.
         candidate_session = session(
             "leader", session_id="candidate-session",
-            pane_id="pane-leader", tab_id="candidate-tab",
         )
         candidate_binding = binding(
             "leader", binding_id="candidate-binding", authority="CANDIDATE",
@@ -484,7 +478,7 @@ class FakeTransportCrashTests(unittest.TestCase):
         self.assertEqual("binding-leader", transport.bindings["binding-executor"]["parent_binding_id"])
         self.assertEqual("binding-leader", transport.bindings["binding-reviewer"]["parent_binding_id"])
 
-    def test_oracle_fails_closed_for_pane_authority_and_parent_violations(self) -> None:
+    def test_oracle_fails_closed_for_role_process_and_parent_violations(self) -> None:
         def configured() -> harness.FakeTransport:
             transport = harness.FakeTransport()
             for role in ("leader", "executor", "reviewer"):
@@ -495,7 +489,7 @@ class FakeTransportCrashTests(unittest.TestCase):
                 "binding-reviewer": binding("reviewer"),
             }
             transport.configure_oracle(
-                pane_ids=["pane-leader", "pane-executor", "pane-reviewer"],
+                role_sessions=[("leader", "session-leader"), ("leader", "candidate-session"), ("executor", "session-executor"), ("reviewer", "session-reviewer")],
                 authority_generation=1,
                 leader_binding_ids=["binding-leader", "candidate-binding"],
                 worker_binding_ids=["binding-executor", "binding-reviewer"],
@@ -503,12 +497,12 @@ class FakeTransportCrashTests(unittest.TestCase):
             )
             return transport
 
-        extra_pane = configured()
-        extra_pane.sessions["unexpected"] = dict(
-            session("leader", session_id="unexpected", pane_id="pane-four"), running=True,
+        extra_role_process = configured()
+        extra_role_process.sessions["unexpected"] = dict(
+            session("leader", session_id="unexpected"), running=True,
         )
-        with self.assertRaisesRegex(core.ProtocolError, "PANE_INVARIANT"):
-            extra_pane.reconcile()
+        with self.assertRaisesRegex(core.ProtocolError, "ROLE_PROCESS_INVARIANT"):
+            extra_role_process.reconcile()
 
         duplicate_authority = configured()
         duplicate_authority.bindings["candidate-binding"] = {
@@ -532,7 +526,7 @@ class FakeTransportCrashTests(unittest.TestCase):
             transport = harness.FakeTransport()
             for role in before["roles"]:
                 transport.sessions[role["session_id"]] = {
-                    key: role[key] for key in ("role", "cli_tool", "session_id", "pane_id", "tab_id")
+                    key: role[key] for key in ("role", "cli_tool", "session_id")
                 } | {"running": True}
                 transport.bindings[role["binding_id"]] = {
                     "role": role["role"], "binding_id": role["binding_id"],
@@ -540,7 +534,7 @@ class FakeTransportCrashTests(unittest.TestCase):
                     "leader_generation": 1, "authority_state": role["authority_state"],
                 }
             transport.sessions[new["session_id"]] = {
-                key: new[key] for key in ("role", "cli_tool", "session_id", "pane_id", "tab_id")
+                key: new[key] for key in ("role", "cli_tool", "session_id")
             } | {"running": True}
             transport.bindings[new["binding_id"]] = {
                 "role": "leader", "binding_id": new["binding_id"],
@@ -548,7 +542,7 @@ class FakeTransportCrashTests(unittest.TestCase):
                 "authority_state": "CANDIDATE",
             }
             transport.configure_migration_oracle(
-                pane_ids=[role["pane_id"] for role in before["roles"]],
+                role_sessions=[(role["role"], role["session_id"]) for role in before["roles"]] + [(new["role"], new["session_id"])],
                 source_generation=1, target_generation=2,
                 old_leader_binding_id=old["binding_id"],
                 new_leader_binding_id=new["binding_id"],
@@ -965,9 +959,9 @@ class E2EEvidenceTests(unittest.TestCase):
         with self.assertRaisesRegex(core.ProtocolError, "INVALID_E2E_JOURNAL_DIGEST"):
             harness.validate_e2e_evidence(tampered_journal)
 
-    def test_duplicate_pane_identity_and_missing_acknowledgement_fail_closed(self) -> None:
+    def test_duplicate_session_identity_and_missing_acknowledgement_fail_closed(self) -> None:
         duplicate = evidence()
-        duplicate["identities"][1]["pane_id"] = "pane-leader"
+        duplicate["identities"][1]["session_id"] = "session-leader"
         with self.assertRaises(core.ProtocolError):
             harness.validate_e2e_evidence(duplicate)
 
@@ -1225,9 +1219,9 @@ class PreAuthorityLiveSmokeTests(unittest.TestCase):
     def fixture(self) -> dict:
         artifact = json.loads(COMPATIBILITY_PATH.read_text(encoding="utf-8"))
         identities = [
-            {"role": "leader", "cli_tool": "codex", "pane_id": "pane-leader", "tab_id": "tab-leader", "session_id": "session-leader", "binding_id": "binding-leader"},
-            {"role": "executor", "cli_tool": "codex", "pane_id": "pane-executor", "tab_id": "tab-executor", "session_id": "session-executor", "binding_id": "binding-executor"},
-            {"role": "reviewer", "cli_tool": "codex", "pane_id": "pane-reviewer", "tab_id": "tab-reviewer", "session_id": "session-reviewer", "binding_id": "binding-reviewer"},
+            {"role": "leader", "cli_tool": "codex", "session_id": "session-leader", "binding_id": "binding-leader"},
+            {"role": "executor", "cli_tool": "codex", "session_id": "session-executor", "binding_id": "binding-executor"},
+            {"role": "reviewer", "cli_tool": "codex", "session_id": "session-reviewer", "binding_id": "binding-reviewer"},
         ]
         context = {
             "run_id": "run-1", "migration_id": "run-1-pre-authority",
@@ -1268,7 +1262,7 @@ class PreAuthorityLiveSmokeTests(unittest.TestCase):
             compatibility_row_id="windows-local-claude-2.1.220-codex-0.144.6",
             identities=identities, probe_context=context, probe_records=records,
             captured_at="2026-07-26T12:02:00Z",
-            provenance={"kind": "ccpanes-live-capture", "pane_count": 3},
+            provenance={"kind": "ccpanes-live-capture", "role_process_count": 3},
         )
 
     def test_live_smoke_round_trip_preserves_deferred_authority(self) -> None:

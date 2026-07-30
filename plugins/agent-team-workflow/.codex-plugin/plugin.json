@@ -1,6 +1,6 @@
 {
   "name": "agent-team-workflow",
-  "version": "0.2.0",
+  "version": "0.2.0+codex.20260730132136",
   "description": "Run a persistent three-Codex team by default, with optional explicitly approved Claude Leader migration and recovery.",
   "author": {
     "name": "Meizhouyu",

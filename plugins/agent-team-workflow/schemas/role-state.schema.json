@@ -24,13 +24,12 @@
   "$defs": {
     "role": {
       "type": "object", "additionalProperties": false,
-      "required": ["schema_version", "role", "cli_tool", "adapter_id", "runtime_kind", "project_root", "session_id", "resume_id", "pane_id", "tab_id", "binding_id", "parent_binding_id", "leader_generation", "authority_state", "required_capabilities", "advertised_capabilities", "verified_at"],
+      "required": ["schema_version", "role", "cli_tool", "adapter_id", "runtime_kind", "project_root", "session_id", "resume_id", "binding_id", "parent_binding_id", "leader_generation", "authority_state", "required_capabilities", "advertised_capabilities", "verified_at"],
       "properties": {
         "schema_version": {"const": 1}, "role": {"enum": ["leader", "executor", "reviewer"]},
         "cli_tool": {"type": "string", "minLength": 1}, "adapter_id": {"type": "string", "minLength": 1},
         "runtime_kind": {"type": "string", "minLength": 1}, "project_root": {"type": "string", "minLength": 1},
         "session_id": {"type": "string", "minLength": 1}, "resume_id": {"type": ["string", "null"], "minLength": 1},
-        "pane_id": {"type": "string", "minLength": 1}, "tab_id": {"type": "string", "minLength": 1},
         "binding_id": {"type": "string", "minLength": 1}, "parent_binding_id": {"type": ["string", "null"], "minLength": 1},
         "leader_generation": {"type": "integer", "minimum": 0},
         "authority_state": {"enum": ["ACTIVE", "CANDIDATE", "FROZEN", "SUPERSEDED", "QUARANTINED"]},

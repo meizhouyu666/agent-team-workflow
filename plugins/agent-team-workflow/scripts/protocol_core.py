@@ -214,7 +214,7 @@ def atomic_write(path: Path, data: bytes, *, backup: bool = False) -> None:
 
 ROLE_FIELDS = (
     "schema_version", "role", "cli_tool", "adapter_id", "runtime_kind",
-    "project_root", "session_id", "resume_id", "pane_id", "tab_id",
+    "project_root", "session_id", "resume_id",
     "binding_id", "parent_binding_id", "leader_generation", "authority_state",
     "required_capabilities", "advertised_capabilities", "verified_at",
 )
@@ -228,7 +228,7 @@ def validate_role_descriptor(role: Mapping[str, Any], expected_role: str | None 
         _fail("UNSUPPORTED_SCHEMA", "role descriptor schema must be 1")
     if role["role"] not in ROLES or (expected_role and role["role"] != expected_role):
         _fail("INVALID_ROLE", str(role["role"]))
-    for key in ("cli_tool", "adapter_id", "runtime_kind", "project_root", "session_id", "pane_id", "tab_id", "binding_id"):
+    for key in ("cli_tool", "adapter_id", "runtime_kind", "project_root", "session_id", "binding_id"):
         _string(role[key], key)
     _string(role["resume_id"], "resume_id", nullable=True)
     _string(role["parent_binding_id"], "parent_binding_id", nullable=True)
@@ -271,6 +271,7 @@ def validate_role_state(state: Mapping[str, Any]) -> dict[str, Any]:
     if [item.get("role") if isinstance(item, dict) else None for item in roles] != list(ROLES):
         _fail("INVALID_ROLE_ORDER", "roles must be leader, executor, reviewer")
     bindings: set[str] = set()
+    sessions: set[str] = set()
     active_leaders = 0
     for role_name, role in zip(ROLES, roles):
         validate_role_descriptor(role, role_name)
@@ -279,6 +280,9 @@ def validate_role_state(state: Mapping[str, Any]) -> dict[str, Any]:
         if role["binding_id"] in bindings:
             _fail("DUPLICATE_BINDING", role["binding_id"])
         bindings.add(role["binding_id"])
+        if role["session_id"] in sessions:
+            _fail("DUPLICATE_SESSION", role["session_id"])
+        sessions.add(role["session_id"])
         if role_name == "leader":
             if role["parent_binding_id"] is not None:
                 _fail("INVALID_PARENT", "leader parent must be null")
@@ -348,7 +352,7 @@ def upgrade_schema0(path: Path, legacy_path: Path, proposed: Mapping[str, Any], 
     if len(live_roles) != 3:
         _fail("LIVE_VALIDATION_FAILED", "exactly three live roles required")
     for expected, observed in zip(state["roles"], live_roles):
-        keys = ("role", "cli_tool", "session_id", "pane_id", "tab_id", "binding_id", "parent_binding_id", "project_root")
+        keys = ("role", "cli_tool", "session_id", "binding_id", "parent_binding_id", "project_root")
         if expected["cli_tool"] != "codex" or any(observed.get(key) != expected[key] for key in keys):
             _fail("LIVE_VALIDATION_FAILED", expected["role"])
     return write_role_state(path, state)
@@ -1411,7 +1415,7 @@ def validate_adapter_capabilities(advertised: Iterable[str], required: Iterable[
     return not missing, missing
 
 
-def validate_readiness(expected_root: str | Path, cwd: str | Path, git_top_level: str | Path, skill_loaded: bool, assignment_received: bool, mapping_stable: bool) -> dict[str, Any]:
+def validate_readiness(expected_root: str | Path, cwd: str | Path, git_top_level: str | Path, skill_loaded: bool, assignment_received: bool, role_identity_stable: bool) -> dict[str, Any]:
     """Validate exact adapter readiness evidence without transport inference."""
     expected = Path(expected_root).resolve()
     observed_cwd = Path(cwd).resolve()
@@ -1424,12 +1428,12 @@ def validate_readiness(expected_root: str | Path, cwd: str | Path, git_top_level
         _fail("SKILL_NOT_LOADED", "native role Skill discovery/trust failed")
     if assignment_received is not True:
         _fail("ASSIGNMENT_NOT_RECEIVED", "injected assignment was not observed")
-    if mapping_stable is not True:
-        _fail("UNSTABLE_SESSION_MAPPING", "pane/tab/session mapping changed")
+    if role_identity_stable is not True:
+        _fail("UNSTABLE_ROLE_IDENTITY", "role/session/binding identity changed")
     return {
         "ready": True, "project_root": str(expected), "cwd": str(observed_cwd),
         "git_top_level": str(observed_git), "skill_loaded": True,
-        "assignment_received": True, "mapping_stable": True,
+        "assignment_received": True, "role_identity_stable": True,
     }
 
 
@@ -1639,10 +1643,7 @@ def validate_gate_probe_records(
         coordinator_pair = (context["coordinator_binding_id"], context["coordinator_session_id"])
         candidate_pair = (context["candidate_binding_id"], context["candidate_session_id"])
         target_kind = record["target"]["kind"]
-        if target_kind in ("leader-pane", "layout"):
-            if target_pair != (None, None):
-                _fail("GATE_CORRELATION_MISMATCH", "non-role target has role identity")
-        elif target_kind in ("coordinator-binding", "coordinator-session"):
+        if target_kind in ("coordinator-binding", "coordinator-session"):
             if target_pair != coordinator_pair:
                 _fail("GATE_CORRELATION_MISMATCH", "coordinator target identity")
         elif target_kind in ("candidate-binding", "candidate-session"):

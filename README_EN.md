@@ -34,10 +34,11 @@ adapters; it is not a security boundary against unmanaged processes.
 ## Team model
 
 - **Leader**: Codex by default; Claude Code only after explicit `claude-leader` approval. It discusses requirements and architecture, owns durable decisions and routing, and does not implement application code.
-- **Codex Executor Mother**: consumes an approved spec, delegates bounded non-overlapping tasks to internal subagents, integrates changes, and verifies the result.
+- **Codex Executor Mother**: consumes an approved spec, implements and integrates the change, and records targeted verification. Lean mode permits no internal subagents.
 - **Codex Independent Reviewer**: reviews a frozen snapshot without inheriting implementation reasoning and never applies fixes.
 
-The visible layout is one Leader pane plus an Executor and Reviewer stacked on the right. Internal Executor subagents remain invisible.
+The `codex-three-pane` name is a legacy topology label for the three persistent
+role processes: Leader, Executor, and Reviewer. It does not prescribe UI layout.
 
 ## Durable project state
 
@@ -64,8 +65,8 @@ Raw chat history is never the only source of truth.
 ## Install
 
 Installation and upgrade are inert. They do not select `claude-leader`, migrate
-schema, launch or stop sessions, alter panes or bindings, change permissions, or
-rewrite a personal plugin cache. Those actions require separate explicit operator
+schema, launch or stop sessions, alter UI layout or bindings, change permissions,
+or rewrite role state. Those actions require separate explicit operator
 commands and, for Claude authority, explicit user topology approval.
 
 Requirements for the optional supported Claude migration row: Claude Code 2.1.220, Codex CLI 0.144.6, Git,
@@ -104,7 +105,7 @@ schema-1-to-0.1 downgrade.
 
 ## Start a team
 
-In the default left-pane Codex Leader session, invoke `$lead-agent-workflow` after
+In the default Codex Leader session, invoke `$lead-agent-workflow` after
 Skill discovery. Use the following prompt:
 
 ~~~text
@@ -115,7 +116,7 @@ architecture with me, and do not implement anything before I approve the spec.
 The current Leader wakes `$orchestrate-agent-team` only after approval and wakes
 `$review-agent-work` only after the Executor freezes a stable review snapshot.
 Prompts use CC-Panes session submission, milestones use TaskBindings, and structured
-results return through Leader reports; the user never copies messages between panes.
+results return through Leader reports; the user never copies messages between sessions.
 To use Claude as Leader, the user must separately approve `topology: claude-leader`
 and the journaled migration described in the operator guide.
 
@@ -128,9 +129,9 @@ and the journaled migration described in the operator guide.
 - Allow only one active implementation run per working tree.
 - Require Reviewer PASS for the exact current fingerprint.
 - Rotate a Leader only after a durable handoff has been validated.
-- Reconcile exact CLI/session/pane/binding/generation identity before authority.
+- Reconcile exact CLI/role/session/binding/generation identity before authority.
 - Use one journaled Codex coordinator and two ordered gates for Claude takeover.
-- Preserve exactly three panes; migration adds only a temporary tab in the Leader pane.
+- Preserve exactly three role processes; replacements are authorized by role/session/binding identity.
 - Fail closed on unsupported compatibility, stale envelopes, or ambiguous effects.
 
 ## Architecture
@@ -139,8 +140,11 @@ See [the platform-neutral protocol](docs/protocol.md), [the Claude/Codex + CC-Pa
 
 ## Known limitations
 
+- Codex CLI cannot hot-load plugin or Provider/API configuration. Ask the Leader
+  to blue-green restart one role or rotate Executor, Reviewer, then Leader; if all
+  roles are dead, start one fresh Leader manually in CC-Panes.
 - The sole optional Claude-migration row is intentionally exact; there is no complete cross-platform E2E matrix yet.
-- CC-Panes layout updates and CLI trust prompts require defensive startup checks.
+- CLI trust prompts require defensive startup checks.
 - Context utilization is not exposed in every runtime.
 - CC-Panes has no compare-and-swap generation guard, so fencing is cooperative among protocol-compliant sessions.
 

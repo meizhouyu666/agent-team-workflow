@@ -45,8 +45,6 @@ def descriptor(role: str, generation: int = 1, cli: str = "codex") -> dict:
         "project_root": r"E:\meizhouyu\agentstudy\agent-team-workflow",
         "session_id": f"session-{role}",
         "resume_id": None,
-        "pane_id": f"pane-{role}",
-        "tab_id": f"tab-{role}",
         "binding_id": f"binding-{role}",
         "parent_binding_id": None if role == "leader" else leader_binding,
         "leader_generation": generation,
@@ -257,6 +255,7 @@ class CanonicalAndRoleStateTests(unittest.TestCase):
             lambda state: state["roles"].pop(),
             lambda state: state["roles"].reverse(),
             lambda state: state["roles"][1].__setitem__("binding_id", "binding-leader"),
+            lambda state: state["roles"][1].__setitem__("session_id", "session-leader"),
             lambda state: state["roles"][0].__setitem__("authority_state", "FROZEN"),
         ):
             invalid = copy.deepcopy(valid)
@@ -285,7 +284,7 @@ class CanonicalAndRoleStateTests(unittest.TestCase):
         proposed = role_state()
         live = [
             {key: value for key, value in item.items() if key in {
-                "role", "cli_tool", "session_id", "pane_id", "tab_id",
+                "role", "cli_tool", "session_id",
                 "binding_id", "parent_binding_id", "project_root",
             }}
             for item in proposed["roles"]
@@ -997,12 +996,8 @@ class CompatibilityAndAdapterTests(unittest.TestCase):
             for primitive, predicate in pairs[gate_phase]:
                 probe_id = f"{gate_phase.lower()}-{primitive}"
                 value = {"probe_id": probe_id, "matched": True}
-                pre_launch_pane = gate_phase == "PRE_LAUNCH" and primitive == "launchRole"
-                pre_launch_coordinator = gate_phase == "PRE_LAUNCH" and primitive == "observeSession"
-                if pre_launch_pane:
-                    target_kind, target_id = "leader-pane", "pane-leader"
-                    target_binding = target_session = None
-                elif pre_launch_coordinator:
+                pre_launch_coordinator = gate_phase == "PRE_LAUNCH"
+                if pre_launch_coordinator:
                     target_kind, target_id = "coordinator-session", context["coordinator_session_id"]
                     target_binding = context["coordinator_binding_id"]
                     target_session = context["coordinator_session_id"]
@@ -1042,9 +1037,12 @@ class CompatibilityAndAdapterTests(unittest.TestCase):
 
     def test_pre_launch_targets_are_nonempty_and_identity_correlated(self) -> None:
         launch, observe = self.probe_records("PRE_LAUNCH")
-        self.assertEqual({"kind": "leader-pane", "id": "pane-leader"}, launch["target"])
-        self.assertIsNone(launch["identities"]["target_binding_id"])
-        self.assertIsNone(launch["identities"]["target_session_id"])
+        self.assertEqual(
+            {"kind": "coordinator-session", "id": "old-session"},
+            launch["target"],
+        )
+        self.assertEqual("old-binding", launch["identities"]["target_binding_id"])
+        self.assertEqual("old-session", launch["identities"]["target_session_id"])
         self.assertEqual(
             {"kind": "coordinator-session", "id": "old-session"},
             observe["target"],
@@ -1064,12 +1062,11 @@ class CompatibilityAndAdapterTests(unittest.TestCase):
                 compatibility_artifact_digest=core.digest(self.artifact),
             )
 
-        pane_with_role_identity = copy.deepcopy([launch, observe])
-        pane_with_role_identity[0]["identities"]["target_binding_id"] = "old-binding"
-        pane_with_role_identity[0]["identities"]["target_session_id"] = "old-session"
+        layout_target = copy.deepcopy([launch, observe])
+        layout_target[0]["target"] = {"kind": "layout", "id": "layout-anywhere"}
         with self.assertRaisesRegex(core.ProtocolError, "GATE_CORRELATION_MISMATCH"):
             core.validate_gate_probe_records(
-                pane_with_role_identity, context,
+                layout_target, context,
                 compatibility_row_id=self.row["id"],
                 compatibility_artifact_digest=core.digest(self.artifact),
             )
@@ -1221,7 +1218,7 @@ class ReadinessAndDispatchTests(unittest.TestCase):
             ROOT, ROOT, ROOT,
             skill_loaded=True,
             assignment_received=True,
-            mapping_stable=True,
+            role_identity_stable=True,
         )
         self.assertTrue(ready["ready"])
         self.assertEqual(str(ROOT.resolve()), ready["project_root"])
@@ -1231,7 +1228,7 @@ class ReadinessAndDispatchTests(unittest.TestCase):
             ("WRONG_GIT_ROOT", ROOT, ROOT.parent, True, True, True),
             ("SKILL_NOT_LOADED", ROOT, ROOT, False, True, True),
             ("ASSIGNMENT_NOT_RECEIVED", ROOT, ROOT, True, False, True),
-            ("UNSTABLE_SESSION_MAPPING", ROOT, ROOT, True, True, False),
+            ("UNSTABLE_ROLE_IDENTITY", ROOT, ROOT, True, True, False),
         )
         for code, cwd, git_root, skill, assignment, stable in cases:
             with self.subTest(code=code):
@@ -1240,7 +1237,7 @@ class ReadinessAndDispatchTests(unittest.TestCase):
                         ROOT, cwd, git_root,
                         skill_loaded=skill,
                         assignment_received=assignment,
-                        mapping_stable=stable,
+                        role_identity_stable=stable,
                     )
 
     def test_target_role_cli_selection_is_heterogeneous_and_closed(self) -> None:

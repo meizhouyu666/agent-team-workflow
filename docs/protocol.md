@@ -78,21 +78,21 @@ An implementation adapter provides these semantic operations:
 5. Stop a superseded or failed session.
 6. Persist parent/worker role bindings.
 7. Deliver worker results to the current Leader.
-8. Reconcile live sessions, panes, role descriptors, and bindings.
+8. Reconcile live role sessions, role descriptors, and bindings.
 9. Spawn bounded internal implementation agents when supported.
 10. Detect, or conservatively infer, context pressure.
 
 The stable names are `resolveProject`, `launchRole`, `resumeRole`,
 `deliverPrompt`, `observeSession`, `stopSession`, `bindRole`, `updateMilestone`,
 `reportToLeader`, and `reconcile`. Each role descriptor names the role, CLI tool,
-session/resume identity, pane/tab identity, exact project root, binding/parent IDs,
+session/resume identity, exact project root, binding/parent IDs,
 generation, and declared capabilities. A launcher selects the target descriptor's
 CLI tool; it never assumes the caller and target use the same CLI.
 
 Missing capabilities must degrade explicitly. An adapter must never pretend that unmanaged processes are durable bindings.
 
 Normalized readiness evidence is exact terminal cwd, exact Git top-level, loaded
-role Skill, received assignment or activation, and stable pane/tab/session/binding
+role Skill, received assignment or activation, and stable role/session/binding
 identity. Authority is refused until reconciliation proves every item.
 
 ## Durable role and message state
