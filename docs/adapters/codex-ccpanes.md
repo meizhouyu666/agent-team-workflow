@@ -2,8 +2,9 @@
 
 This adapter runs exactly three role processes: Codex Leader, Codex Executor Mother,
 and Codex Independent Reviewer. The default is `codex-three-pane`; despite its
-legacy topology name, it does not prescribe a pane, tab, geometry, title, placement,
-or layout. CC-Panes and the user own the UI.
+legacy topology name, it does not prescribe a pane, tab, geometry, placement, or
+layout. CC-Panes and the user own the UI. Display titles are discoverability hints,
+not topology, identity, or authority.
 
 A role descriptor is pane-independent: exact `project_root + role + session_id +
 binding_id`, with CLI, generation, parent binding, capabilities, and verification
@@ -21,6 +22,12 @@ Use `launch_task` with the user's existing CC-Panes/Provider configuration; this
 adapter makes no model selection or routing default. Validate cwd/Git root, Skill,
 role identity, parent/generation, and capabilities before a replacement becomes
 authoritative. A failure is INDETERMINATE until reconciliation proves otherwise.
+
+Every formal role launch and resume passes a stable `launch_task.title`, mirrored to
+the TaskBinding title: `[ATW][Leader][<project-dir>]`,
+`[ATW][Executor][<project-dir>]`, or `[ATW][Reviewer][<project-dir>]`. A new-session
+prompt starts with the same value for clients that derive titles from prompt text.
+Never use a display title for reconciliation or authorization.
 
 ## Blue-green Replacement
 

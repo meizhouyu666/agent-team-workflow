@@ -109,6 +109,7 @@ In the default Codex Leader session, invoke `$lead-agent-workflow` after
 Skill discovery. Use the following prompt:
 
 ~~~text
+[ATW][Leader][<project-dir>]
 Use $lead-agent-workflow with the default codex-three-pane topology. Discuss requirements and
 architecture with me, and do not implement anything before I approve the spec.
 ~~~
@@ -119,6 +120,18 @@ Prompts use CC-Panes session submission, milestones use TaskBindings, and struct
 results return through Leader reports; the user never copies messages between sessions.
 To use Claude as Leader, the user must separately approve `topology: claude-leader`
 and the journaled migration described in the operator guide.
+
+CC-Panes uses stable display titles for the formal roles:
+
+- `[ATW][Leader][<project-dir>]`
+- `[ATW][Executor][<project-dir>]`
+- `[ATW][Reviewer][<project-dir>]`
+
+Launch, resume, and rebind operations mirror the value through `launch_task.title`
+and the TaskBinding title; new prompts use it as the first line. These titles are
+only for human recognition and never participate in identity or authority. Run
+Codex `/rename` once with the same value if you also want a recognizable name in
+the Codex resume picker.
 
 ## Safety properties
 

@@ -2,7 +2,8 @@
 
 The workflow has exactly three role processes: Leader, Executor Mother, and
 Independent Reviewer. UI placement is not part of the contract. Do not inspect,
-persist, or depend on panes, tabs, geometry, titles, placement, or layout.
+persist, or depend on panes, tabs, geometry, placement, or layout. Display titles
+exist only to help a user recognize sessions and must never grant authority.
 
 Installation and upgrade are inert: they do not select `codex-three-pane` or
 `claude-leader`, create `.codex/roles.json`, launch a role, or change a binding.
@@ -34,6 +35,16 @@ boundary.
 
 Use blue-green replacement when a role needs a fresh process, including a Provider
 or API configuration that cannot hot-load.
+
+Use these titles for both `launch_task.title` and the TaskBinding title:
+
+- `[ATW][Leader][<project-dir>]`
+- `[ATW][Executor][<project-dir>]`
+- `[ATW][Reviewer][<project-dir>]`
+
+Also put the title on the first line of a new-session prompt. For a manually
+started Leader, use that first line in the bootstrap prompt; optionally run Codex
+`/rename` once so the saved chat is recognizable in the Codex resume picker.
 
 1. Checkpoint durable state and freeze new work for the target role.
 2. Launch one replacement with the user's current CC-Panes/Provider configuration.

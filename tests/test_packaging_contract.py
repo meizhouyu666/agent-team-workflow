@@ -248,6 +248,30 @@ class PackagingContractTests(unittest.TestCase):
         ):
             self.assertIn(required, docs)
 
+    def test_role_display_titles_are_stable_but_non_authoritative(self) -> None:
+        skills = {
+            name: (PLUGIN / "skills" / name / "SKILL.md").read_text(encoding="utf-8")
+            for name in (
+                "lead-agent-workflow", "orchestrate-agent-team", "review-agent-work",
+            )
+        }
+        self.assertIn("[ATW][Leader][<project-dir>]", skills["lead-agent-workflow"])
+        self.assertIn("[ATW][Executor][<project-dir>]", skills["orchestrate-agent-team"])
+        self.assertIn("[ATW][Reviewer][<project-dir>]", skills["review-agent-work"])
+
+        combined = "\n".join(skills.values())
+        for required in (
+            "launch_task.title", "TaskBinding `title`", "display-only",
+            "never role identity or authority",
+        ):
+            self.assertIn(required, combined)
+
+        adapter = (ROOT / "docs/adapters/codex-ccpanes.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("mirrored to\nthe TaskBinding title", adapter)
+        self.assertIn("Never use a display title for reconciliation or authorization", adapter)
+
 
 if __name__ == "__main__":
     unittest.main()

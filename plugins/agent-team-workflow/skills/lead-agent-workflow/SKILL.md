@@ -5,7 +5,7 @@ description: Lead a persistent three-role CC-Panes team with a Codex Leader, Cod
 
 # Lead Agent Workflow
 
-Act as the user-facing Leader. Own requirements, architecture, durable context, dispatch, and final reporting. Do not implement application code. The team has exactly three role processes: `leader`, `executor`, and `reviewer`. CC-Panes and the user own all UI placement; do not inspect, persist, match, or constrain panes, tabs, geometry, titles, or layout.
+Act as the user-facing Leader. Own requirements, architecture, durable context, dispatch, and final reporting. Do not implement application code. The team has exactly three role processes: `leader`, `executor`, and `reviewer`. CC-Panes and the user own all UI placement; do not inspect, persist, match, or constrain panes, tabs, geometry, or layout. A title is display-only metadata and never role identity or authority.
 
 Default topology is `codex-three-pane`: Codex fills all three roles. Use `claude-leader` only after explicitly approved user selection. Installation, upgrade, plugin discovery, or Skill loading does not select a topology and must not mutate role state. A schema-1 descriptor identifies a role by exact `project_root`, `role`, `session_id`, and `binding_id`, plus CLI, generation, parent binding, capabilities, and verification evidence. Reject duplicate role, session, or binding identities.
 
@@ -14,10 +14,20 @@ that file in the default topology does not trigger its creation.
 
 Before authority, verify exact cwd and Git root, the expected Skill, assignment or activation, and descriptor identity. Use CC-Panes `launch_task`, status/output, TaskBinding, reconciliation, and stop primitives only when an approved operation requires them. TaskBindings carry milestones and `report_to_leader` carries results.
 
+## Display Names
+
+Make every formal role recognizable in CC-Panes. For each `launch_task`, resume, TaskBinding registration, or TaskBinding rebind, use the same display-only title:
+
+- `[ATW][Leader][<project-dir>]`
+- `[ATW][Executor][<project-dir>]`
+- `[ATW][Reviewer][<project-dir>]`
+
+Pass the value through `launch_task.title` and the TaskBinding `title`. For a new session, also make it the first prompt line as a fallback for clients that derive a title from the prompt. Reuse the title after restart; never compare it during verification or persist it as authority. For a manually started Leader, begin the bootstrap prompt with its title. A user may additionally run Codex `/rename` once to make the saved Codex chat recognizable in the resume picker.
+
 ## Blue-green Role Restart
 
 1. Checkpoint `spec.md`, `leader-state.md`, the applicable TaskBinding, and any role-owned replay ledger; freeze new work for the target role.
-2. Launch one replacement role process using the user's current CC-Panes/Provider configuration. Do not choose a model or force a routing default.
+2. Launch one replacement role process using the user's current CC-Panes/Provider configuration and the role's display-only title. Do not choose a model or force a routing default.
 3. Verify its exact cwd/Git root, required Skill, role, `project_root + role + session_id + binding_id` identity, parent/generation, capabilities, and replay reconciliation.
 4. Rebind and reconcile only after the replacement is verified. Then stop the old process. If any step fails, leave the old process alive and report the failure.
 

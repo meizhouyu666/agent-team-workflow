@@ -87,6 +87,7 @@ claude plugin install agent-team-workflow@agent-team-workflow
 在一个新的 Codex Leader 会话中输入：
 
 ```text
+[ATW][Leader][<项目目录名>]
 使用 $lead-agent-workflow 接管当前项目，采用默认三 Codex 角色拓扑。
 先和我讨论需求与架构，在我明确批准规格前不要开始实现。
 ```
@@ -105,6 +106,16 @@ project_root + role + session_id + binding_id
 
 CLI、Leader generation、父绑定、能力声明与验证时间作为附加证据。重复角色、会话或
 绑定会被拒绝；pane、tab 和 layout 不在身份合同内。
+
+CC-Panes 中的三个角色使用固定的可见标题：
+
+- `[ATW][Leader][<项目目录名>]`
+- `[ATW][Executor][<项目目录名>]`
+- `[ATW][Reviewer][<项目目录名>]`
+
+Leader 在启动、恢复和重新绑定角色时同时设置 `launch_task.title` 与 TaskBinding 标题；
+新会话的 prompt 第一行也使用同一标题。标题只用于人工识别，绝不参与身份验证或授权。
+如果还想让 Codex 自身的恢复列表更清楚，可以在每个角色中执行一次 `/rename`，使用同名标题。
 
 ## 低成本模式
 
